@@ -8,7 +8,7 @@ Created on Fri May  9 15:10:22 2025
 import yt_dlp
 import os
 
-def download_playlist_first_n_videos(url, n=9, output_path=None):
+def download_playlist_first_n_videos(url, n=1, output_path=None):
     if output_path is None:
         output_path = os.path.join(os.path.expanduser('~'), 'Downloads')
     os.makedirs(output_path, exist_ok=True)
@@ -44,7 +44,7 @@ def download_playlist_first_n_videos(url, n=9, output_path=None):
 
 # 示例（下载播放列表前 6 个视频）
 playlist_url = "https://www.youtube.com/playlist?list=PLilKLKW6-ssjSl1PCuyTymFWQJwT_jmua"
-download_playlist_first_n_videos(playlist_url, n=6)
+download_playlist_first_n_videos(playlist_url, n=9)
 
 
 
@@ -52,7 +52,7 @@ download_playlist_first_n_videos(playlist_url, n=6)
 # import yt_dlp
 # import os
 
-# def download_playlist_first_n_videos(url, n=6, output_path=None):
+# def download_playlist_first_n_videos(url, n=1, output_path=None):
 #     """下载 YouTube 播放列表的前 N 个视频（MP4 格式）"""
 #     if output_path is None:
 #         output_path = os.path.join(os.path.expanduser('~'), 'Downloads')
@@ -79,8 +79,5 @@ download_playlist_first_n_videos(playlist_url, n=6)
 
 # # 示例（下载播放列表前 6 个视频）
 # playlist_url = "https://www.youtube.com/playlist?list=PLilKLKW6-ssjSl1PCuyTymFWQJwT_jmua"
-# download_playlist_first_n_videos(playlist_url, n=6)
+# download_playlist_first_n_videos(playlist_url, n=9)
 
-# # 示例（下载单个视频）
-# single_video_url = "https://youtu.be/QvAtyUjUEj0?si=kzDYXSPN12SrA0WI"
-# download_playlist_first_n_videos(single_video_url)
