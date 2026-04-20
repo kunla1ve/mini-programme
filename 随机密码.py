@@ -1,49 +1,37 @@
 # -*- coding: utf-8 -*-
 """
-Created on Fri Mar 14 16:19:00 2025
+Created on Mon Apr 20 16:43:58 2026
 
-@author: kunla1ve
+@author: hongl
 """
 
-# import re
-
-# def check_password(password):
-#     # 检查密码长度
-#     if len(password) < 8 or len(password) > 12:
-#         return "不符合"
-#     # 使用正则表达式检查各种字符类型
-#     if not re.search(r'[A-Z]', password):
-#         return "不符合"
-#     if not re.search(r'[a-z]', password):
-#         return "不符合"
-#     if not re.search(r'[0-9]', password):
-#         return "不符合"
-#     if not re.search(r'\W', password):  # \W 匹配任何非字母数字字符
-#         return "不符合"
-#     # 如果所有条件都满足
-#     return "符合"
-
-# # 测试
-# password = input("请输入密码: ")
-# result = check_password(password)
-# print(result)
 
 import random
 import string
 
-def generate_password():
+def generate_password(length=10):
+    """
+    生成随机密码
+    
+    参数:
+        length: 密码长度，默认10个字符
+    返回:
+        符合要求的随机密码
+    """
     # 定义字符集
     lowercase = string.ascii_lowercase  # 小写字母
     uppercase = string.ascii_uppercase  # 大写字母
     digits = string.digits  # 数字
-    special_chars = '!#$%&()*+,-./:;<=>?@[\\]_`{|}~'  # 特殊字符
+    # 修正特殊字符集（去掉空格，避免生成问题）
+    special_chars = '!#$%&()*+-./:;<=>?@[]^_{|}~'  # 特殊字符
     
     all_chars = lowercase + uppercase + digits + special_chars
     
+    # 确保密码长度至少为4（因为需要包含4种类型各一个）
+    if length < 4:
+        raise ValueError("密码长度至少为4个字符")
+    
     while True:
-        # 随机确定密码长度(7-12)
-        length = random.randint(7, 12)
-        
         # 确保每种类型至少有一个字符
         password = [
             random.choice(lowercase),
@@ -70,7 +58,9 @@ def generate_password():
         if valid:
             return password
 
-# 生成并打印密码
-password = generate_password()
-print("生成的随机密码是:", password)
-print(f"密码长度: {len(password)}")
+# 使用示例
+if __name__ == "__main__":
+    # 默认10位密码
+    password = generate_password(10)  # 使用默认长度10
+    print("生成的随机密码是:", password)
+    print(f"密码长度: {len(password)}")
