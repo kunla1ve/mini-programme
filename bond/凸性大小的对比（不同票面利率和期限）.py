@@ -190,20 +190,5 @@ print("• 长期限、低票息债券凸性大，适合预期利率大幅下降
 print("• 短期限、高票息债券凸性小，利率风险暴露更线性")
 print("• 凸性修正使久期风险管理更精确")
 
-# 创建一个单独的装饰性图例说明
-fig2, ax_legend = plt.subplots(figsize=(10, 4))
-ax_legend.axis('off')
-
-# 创建渐变色条说明
-gradient = np.linspace(0, 1, 256).reshape(1, -1)
-ax_legend.imshow(gradient, aspect='auto', cmap=custom_cmap, extent=[0, 1, 0, 1])
-ax_legend.set_xlim(0, 1)
-ax_legend.set_ylim(0, 1)
-ax_legend.text(0.5, 0.5, '凸性从低 → 高', ha='center', va='center', 
-               fontsize=14, fontweight='bold', color='white', 
-               bbox=dict(boxstyle='round,pad=0.5', facecolor='black', alpha=0.7))
-
-ax_legend.set_title('颜色图例说明', fontsize=12, fontweight='bold', pad=10)
-
 plt.tight_layout()
 plt.show()
