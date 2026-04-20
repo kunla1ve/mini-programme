@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Apr 20 18:55:29 2026
-
-@author: kunlave
-"""
-
 import random
 from collections import Counter
 
@@ -30,8 +23,9 @@ def has_soft_bomb(hand, laizi_points, m):
             normal_counts[c] += 1
     
     for cnt in normal_counts.values():
-        for t in range(1, cnt+1):
-            if m - t <= l and m - t >= 0:
+        for t in range(1, cnt + 1):
+            need_laizi = m - t
+            if 0 <= need_laizi <= l:
                 return True
     return False
 
@@ -39,42 +33,63 @@ def simulate_total(laizi_points, m, trials=100000):
     deck = create_deck(laizi_points)
     laizi_set = set(laizi_points)
     
-    count_A = 0  # 地主有
-    count_B = 0  # 农民有
-    count_both = 0
-    count_either = 0
+    count_A = 0  # 地主
+    count_B = 0  # 农民1
+    count_C = 0  # 农民2
+    count_AB = 0
+    count_AC = 0
+    count_BC = 0
+    count_ABC = 0
+    count_any = 0
     
     for _ in range(trials):
         random.shuffle(deck)
-        landlord_hand = deck[:20]
-        farmer_hand = deck[20:37]
+        landlord = deck[:20]
+        farmer1 = deck[20:37]
+        farmer2 = deck[37:54]
         
-        has_landlord = has_soft_bomb(landlord_hand, laizi_set, m)
-        has_farmer = has_soft_bomb(farmer_hand, laizi_set, m)
+        has_A = has_soft_bomb(landlord, laizi_set, m)
+        has_B = has_soft_bomb(farmer1, laizi_set, m)
+        has_C = has_soft_bomb(farmer2, laizi_set, m)
         
-        if has_landlord:
+        if has_A:
             count_A += 1
-        if has_farmer:
+        if has_B:
             count_B += 1
-        if has_landlord and has_farmer:
-            count_both += 1
-        if has_landlord or has_farmer:
-            count_either += 1
+        if has_C:
+            count_C += 1
+        if has_A and has_B:
+            count_AB += 1
+        if has_A and has_C:
+            count_AC += 1
+        if has_B and has_C:
+            count_BC += 1
+        if has_A and has_B and has_C:
+            count_ABC += 1
+        if has_A or has_B or has_C:
+            count_any += 1
     
     return {
         'P_landlord': count_A / trials,
-        'P_farmer': count_B / trials,
-        'P_both': count_both / trials,
-        'P_either': count_either / trials
+        'P_farmer_each': count_B / trials,  # 对称，等于 count_C/trials
+        'P_both_farmers': count_BC / trials,
+        'P_landlord_and_one_farmer': (count_AB + count_AC) / trials / 2,  # 平均一下
+        'P_all_three': count_ABC / trials,
+        'P_any': count_any / trials
     }
 
 # 测试
 if __name__ == "__main__":
     laizi = [1, 2]
-    for m in range(5, 13):   #从5到12炸
-        probs = simulate_total(laizi, m, trials=100000)
-        print(f"\n=== m={m} 张软炸 ===")
-        print(f"地主概率: {probs['P_landlord']:.8f}")
-        print(f"农民概率: {probs['P_farmer']:.8f}")
-        print(f"双方都有: {probs['P_both']:.8f}")
-        print(f"至少一方有: {probs['P_either']:.8f}")
+    print("癞子点数:", laizi)
+    print()
+    for m in range(5, 13):
+        probs = simulate_total(laizi, m, trials=50000)
+        print(f"=== m={m} 张软炸 ===")
+        print(f"  地主概率: {probs['P_landlord']:.6f}")
+        print(f"  单个农民概率: {probs['P_farmer_each']:.6f}")
+        print(f"  两个农民都有: {probs['P_both_farmers']:.6f}")
+        print(f"  地主+任一农民: {probs['P_landlord_and_one_farmer']:.6f}")
+        print(f"  三方都有: {probs['P_all_three']:.6f}")
+        print(f"  ★ 总牌局至少一方有: {probs['P_any']:.6f}")
+        print()
