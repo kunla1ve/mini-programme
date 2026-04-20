@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-Created on Mon Apr 20 17:39:59 2026
+Created on Mon Apr 20 22:30:26 2026
 
-@author: hongl
+@author: kunlave
 """
+
+
 '地主手牌的某 m 张软炸概率'
 '软炸12概率 ≈ 0.0000035000'
 '地主 m=12 软炸概率 ≈ 0.0000100000'
@@ -11,6 +13,7 @@ Created on Mon Apr 20 17:39:59 2026
 
 import random
 from collections import Counter
+from tqdm import tqdm
 
 # 定义牌结构：普通牌 (点数, 花色无所谓，只需要点数区分)
 def create_deck(laizi_points):
@@ -30,9 +33,6 @@ def is_laizi(card, laizi_points):
 def has_soft_bomb(hand, laizi_points, m):
     # hand: list of points (普通点数) or 'joker'/'JOKER'
     # laizi_points: set of int points 作为癞子
-    l = sum(1 for c in hand if is_laizi(c, laizi_points) or c in ['joker', 'JOKER'])
-    # 澄清：大小王不是万能牌，不能当癞子，只有两个点数的牌是万能牌。
-    # 修正：
     l = sum(1 for c in hand if is_laizi(c, laizi_points))
     
     # 全癞子
@@ -58,9 +58,11 @@ def simulate(laizi_points, m, trials=100000):
     laizi_set = set(laizi_points)
     # 洗牌
     success = 0
-    for _ in range(trials):
+    
+    # 添加进度条
+    for _ in tqdm(range(trials), desc=f"模拟 m={m}", unit="次"):
         random.shuffle(deck)
-        landlord_hand = deck[:17]   #  地主手牌20 农民17
+        landlord_hand = deck[:20]   #  地主手牌20 农民17
         if has_soft_bomb(landlord_hand, laizi_set, m):
             success += 1
     return success / trials
@@ -68,14 +70,10 @@ def simulate(laizi_points, m, trials=100000):
 # 测试
 if __name__ == "__main__":
     laizi = [1, 2]  # 选点数 1 和 2 作为癞子
-    for m in range(5, 13):
-        prob = simulate(laizi, m, trials=100000)
+    
+    # 外层总进度条
+    m_values = list(range(5, 13))
+    for m in tqdm(m_values, desc="总进度", unit="m值"):
+        prob = simulate(laizi, m, trials=100000000)
         print(f"地主 m={m} 软炸概率 ≈ {prob:.8f}")
-        
-        
-    # prob = simulate(laizi, 12, trials=100000)
-    # print(f"软炸概率 ≈ {prob:.8f}")
-        
-        
-        
-        
+        print()
