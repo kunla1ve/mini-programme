@@ -5,7 +5,6 @@ Created on Mon Apr 20 22:30:26 2026
 @author: kunlave
 """
 
-
 '地主手牌的某 m 张软炸概率'
 '软炸12概率 ≈ 0.0000035000'
 '地主 m=12 软炸概率 ≈ 0.0000100000'
@@ -15,65 +14,70 @@ import random
 from collections import Counter
 from tqdm import tqdm
 
-# 定义牌结构：普通牌 (点数, 花色无所谓，只需要点数区分)
-def create_deck(laizi_points):
-    suits = ['s', 'h', 'd', 'c']
+def create_deck():
+    """创建标准54张牌，返回牌列表（普通牌用点数1-13表示，大小王用'sJOKER'/'bJOKER'表示）"""
     deck = []
-    for point in range(1, 14):  # 1~13
+    # 普通牌：点数1-13，每种4张
+    for point in range(1, 14):
         for _ in range(4):
             deck.append(point)
-    deck.extend(['joker', 'JOKER'])  # 大小王
-    # 将 laizi_points 中的点数的牌改为标记为 laizi
-    # 这里简单处理：标记手牌时判断该牌是否在 laizi_points 中
-    return deck, laizi_points
+    # 大小王（不作为癞子，也不作为软炸元素）
+    deck.append('sJOKER')  # 小王
+    deck.append('bJOKER')  # 大王
+    return deck
 
 def is_laizi(card, laizi_points):
+    """判断一张牌是否为癞子（癞子只能是普通牌点数）"""
+    if card in ['sJOKER', 'bJOKER']:
+        return False
     return card in laizi_points
 
 def has_soft_bomb(hand, laizi_points, m):
-    # hand: list of points (普通点数) or 'joker'/'JOKER'
-    # laizi_points: set of int points 作为癞子
-    l = sum(1 for c in hand if is_laizi(c, laizi_points))
+    """
+    判断手牌中是否有m张软炸（由m张相同点数的牌组成，癞子可以补全）
+    要求：至少有一张普通牌（不能全癞子）
+    注意：大小王不参与软炸
+    """
+    # 计算癞子数量（只统计手牌中的普通牌癞子）
+    laizi_count = sum(1 for c in hand if is_laizi(c, laizi_points))
     
-    # 全癞子
-    if m <= l:
-        return True
-    
-    # 普通牌计数
+    # 统计非癞子的普通牌数量（不包括大小王）
     normal_counts = Counter()
     for c in hand:
-        if not is_laizi(c, laizi_points) and c not in ['joker', 'JOKER']:
+        if c not in ['sJOKER', 'bJOKER'] and not is_laizi(c, laizi_points):
             normal_counts[c] += 1
     
-    # 对每个普通点数，尝试作为软炸主体
+    # 对每个点数，检查是否能用癞子补成m张，且至少有一张普通牌
     for pt, cnt in normal_counts.items():
-        for t in range(1, cnt+1):  # t 张普通牌用这个点数
-            need_laizi = m - t
-            if need_laizi >= 0 and need_laizi <= l:
+        # 需要补的癞子数量
+        need_laizi = m - cnt
+        if need_laizi >= 0 and need_laizi <= laizi_count:
+            # 确保至少有一张普通牌（cnt >= 1）
+            if cnt >= 1:
                 return True
+    
     return False
 
 def simulate(laizi_points, m, trials=100000):
-    deck, _ = create_deck(laizi_points)
+    """模拟地主手牌，计算软炸概率"""
+    deck = create_deck()
     laizi_set = set(laizi_points)
-    # 洗牌
     success = 0
     
-    # 添加进度条
     for _ in tqdm(range(trials), desc=f"模拟 m={m}", unit="次"):
         random.shuffle(deck)
-        landlord_hand = deck[:20]   #  地主手牌20 农民17
+        landlord_hand = deck[:20]  # 地主20张牌
         if has_soft_bomb(landlord_hand, laizi_set, m):
             success += 1
+    
     return success / trials
 
-# 测试
 if __name__ == "__main__":
-    laizi = [1, 2]  # 选点数 1 和 2 作为癞子
+    # 设置癞子点数（只能是普通牌点数1-13）
+    laizi = [1, 2]  # 点数1和2作为癞子
     
-    # 外层总进度条
-    m_values = list(range(5, 13))
+    m_values = list(range(5, 13))  # 测试m=12
     for m in tqdm(m_values, desc="总进度", unit="m值"):
-        prob = simulate(laizi, m, trials=100000000)
+        prob = simulate(laizi, m, trials=100000)
         print(f"地主 m={m} 软炸概率 ≈ {prob:.8f}")
         print()
