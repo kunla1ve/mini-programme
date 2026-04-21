@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Created on Mon Apr 20 21:40:33 2026
+Modified on 2026-04-21
 
 @author: kunlave
 """
@@ -29,18 +30,23 @@ def create_deck(laizi_points):
 def is_laizi(card, laizi_points):
     """
     判断一张牌是否为癞子
+    注意：大小王不能作为癞子
     参数:
         card: 牌面值（数字或字符串）
         laizi_points: 癞子点数集合
     返回:
         True表示是癞子，False表示不是
     """
+    # 大小王永远不能作为癞子
+    if card in ['joker', 'JOKER']:
+        return False
     return card in laizi_points
 
 def has_soft_bomb(hand, laizi_points, m):
     """
     判断一手牌是否包含m张软炸（癞子可替代其他牌形成炸弹）
-    软炸定义：由t张相同点数的普通牌 + (m-t)张癞子组成，其中1≤t≤m
+    软炸定义：由t张相同点数的普通牌 + (m-t)张癞子组成，其中1≤t≤m（至少1张普通牌）
+    注意：大小王不能作为软炸的元素
     
     参数:
         hand: 手牌列表
@@ -49,26 +55,27 @@ def has_soft_bomb(hand, laizi_points, m):
     返回:
         True表示有软炸，False表示没有
     """
-    # 统计手牌中的癞子数量
+    # 统计手牌中的癞子数量（排除大小王）
     laizi_count = sum(1 for c in hand if is_laizi(c, laizi_points))
-    
-    # 情况1：癞子数量足够直接形成m张软炸
-    if m <= laizi_count:
-        return True
     
     # 统计非癞子、非王牌的普通牌数量
     normal_counts = Counter()
     for c in hand:
+        # 排除癞子、大小王（大小王不能作为软炸元素）
         if not is_laizi(c, laizi_points) and c not in ['joker', 'JOKER']:
             normal_counts[c] += 1
     
     # 检查每种点数的牌能否与癞子组合成m张软炸
     for cnt in normal_counts.values():
-        # t是实际普通牌的数量，从1到cnt
+        # t是实际普通牌的数量，从1到cnt（至少1张普通牌）
         for t in range(1, cnt + 1):
             need_laizi = m - t  # 需要的癞子数量
+            # 需要的癞子数量必须在0到laizi_count之间
+            # 且t >= 1（已有保证），且need_laizi >= 0
             if 0 <= need_laizi <= laizi_count:
                 return True
+    
+    # 全癞子不能算软炸（因为没有普通牌），所以这里不检查laizi_count >= m的情况
     
     return False
 
@@ -145,23 +152,25 @@ def simulate_total(laizi_points, m, trials=100000):
 
 # 主程序入口
 if __name__ == "__main__":
-    # 设置癞子点数（这里设定1和2为癞子）
+    # 设置癞子点数（这里设定1和2为癞子，但大小王不会成为癞子）
     laizi = [1, 2]
     print("="*60)
     print("斗地主软炸概率模拟程序")
     print("="*60)
     print(f"癞子点数: {laizi}")
-    print(f"说明: 数字1-13表示点数，'joker'和'JOKER'表示大小王")
+    print("注意：大小王不能作为癞子，也不能作为软炸的元素")
+    print("注意：全癞子组合不能算作软炸（必须至少有一张普通牌）")
+    print("说明: 数字1-13表示点数，'joker'和'JOKER'表示大小王")
     print("="*60)
     print()
     
     # 模拟m=12张的软炸概率（可以修改m值）
-    for m in range(12, 13):
+    for m in range(5, 13):
         print(f"正在计算 m={m} 张软炸的概率...")
         print("-"*60)
         
         # 进行模拟（trials可调整，越大越精确但耗时更长）
-        probs = simulate_total(laizi, m, trials=100000000)  # 100万次模拟
+        probs = simulate_total(laizi, m, trials=10000)  # 100万次模拟
         
         # 输出结果（保留8位小数）
         print(f"=== m={m} 张软炸 ===")
