@@ -78,7 +78,7 @@ if __name__ == "__main__":
     # 设置癞子点数（只能是普通牌点数1-13）
     laizi = [1, 2]  # 点数1和2作为癞子
     
-    m_values = list(range(12, 13))  # 测试m=12
+    m_values = list(range(5, 13))  # 测试m=12
     # 外层进度条也使用position=1避免冲突
     for m in tqdm(m_values, desc="总进度", unit="m值", position=1, leave=True):
         prob = simulate(laizi, m, trials=100000000)
