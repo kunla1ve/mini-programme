@@ -64,7 +64,9 @@ def simulate(laizi_points, m, trials=100000):
     laizi_set = set(laizi_points)
     success = 0
     
-    for _ in tqdm(range(trials), desc=f"模拟 m={m}", unit="次"):
+    # 使用position=0让进度条固定在同一个位置
+    for _ in tqdm(range(trials), desc=f"模拟 m={m}", unit="次", 
+                  position=0, leave=False):
         random.shuffle(deck)
         landlord_hand = deck[:20]  # 地主20张牌
         if has_soft_bomb(landlord_hand, laizi_set, m):
@@ -76,8 +78,9 @@ if __name__ == "__main__":
     # 设置癞子点数（只能是普通牌点数1-13）
     laizi = [1, 2]  # 点数1和2作为癞子
     
-    m_values = list(range(5, 13))  # 测试m=12
-    for m in tqdm(m_values, desc="总进度", unit="m值"):
-        prob = simulate(laizi, m, trials=100000)
-        print(f"地主 m={m} 软炸概率 ≈ {prob:.8f}")
+    m_values = list(range(12, 13))  # 测试m=12
+    # 外层进度条也使用position=1避免冲突
+    for m in tqdm(m_values, desc="总进度", unit="m值", position=1, leave=True):
+        prob = simulate(laizi, m, trials=100000000)
+        print(f"\n地主 m={m} 软炸概率 ≈ {prob:.8f}")
         print()
