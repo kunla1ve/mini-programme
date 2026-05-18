@@ -1,0 +1,5 @@
+cd C:\Users\kunlave\Desktop
+conda create -n tiny python=3.9 -y
+conda activate tiny
+pip install pyinstaller
+pyinstaller --onefile --console trading_parser.py
