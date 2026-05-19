@@ -4,14 +4,6 @@ from pathlib import Path
 
 def parse_trading_data(text):
     """解析交易记录文本"""
-    product_map = {
-        'SIEN26': ('2026年 7月', 'CME白銀'),
-        'GCEQ26': ('2026年 8月', 'CME黃金'),
-        'EPM26': ('2026年 6月', 'CME標指'),
-        'ENQM26': ('2026年 6月', 'CME納指'),
-        'YMM26': ('2026年 6月', 'CBOT杜指'),
-        'ZNAM26': ('2026年 6月', 'SIMEX日經'),
-    }
     
     # 清理文本：把断行的 POEMSHK 合并回上一行
     text = re.sub(r' -\n\s*\n\s*POEMSHK', ' - POEMSHK', text)
@@ -29,8 +21,8 @@ def parse_trading_data(text):
         
         lines = block.split('\n')
         
-        # 兼容中英文：买入/卖出 或 BUY/SELL
-        detail_pattern = r'(买入|卖出|BUY|SELL)\s+(\d+)\s*(?:\[(\d+)\])?\s*(\w+)\s*@\s*([\d.]+)\s*-\s*POEMSHK'
+        # 修改正则：匹配 BUY/SELL ... @ ... - (不限定POEMSHK)
+        detail_pattern = r'(买入|卖出|BUY|SELL)\s+(\d+)\s*(?:\[(\d+)\])?\s*(\w+)\s*@\s*([\d.]+)\s*-'
         details = []
         action = None
         symbol = None
@@ -54,16 +46,14 @@ def parse_trading_data(text):
                 price = float(match.group(5))
                 details.append((qty, price))
         
-        if symbol and symbol in product_map and details:
+        if symbol and details:
             total_qty = sum(q for q, _ in details)
             total_value = sum(q * p for q, p in details)
             avg_price = total_value / total_qty
-            period, product_name = product_map[symbol]
             
             transactions.append({
                 'action': action,
-                'period': period,
-                'product': product_name,
+                'product': symbol,
                 'quantity': total_qty,
                 'avg_price': avg_price
             })
@@ -77,7 +67,7 @@ def split_by_product(text):
     current_block = []
     
     for line in lines:
-        if re.search(r'(Silver|Gold|E-Mini|E-mini|Nikkei)', line):
+        if re.search(r'(Silver|Gold|E-Mini|E-mini|Nikkei|USD/CNH|Mini-DAX)', line):
             if current_block:
                 blocks.append('\n'.join(current_block))
             current_block = []
@@ -97,7 +87,7 @@ def create_excel(transactions, output_file):
         output_data.extend([
             [],
             [trans['action']],
-            [trans['period'], f"「{trans['product']}」", trans['quantity'], 
+            ['', trans['product'], trans['quantity'], 
              f"{trans['avg_price']:.4f}", '平均價']
         ])
     
@@ -144,7 +134,7 @@ def main():
         print("\n📊 交易摘要:")
         print("-" * 60)
         for trans in transactions:
-            print(f"{trans['action']}: {trans['period']} {trans['product']} "
+            print(f"{trans['action']}: {trans['product']} "
                   f"{trans['quantity']}張 @ {trans['avg_price']:.4f}")
         
     except Exception as e:
