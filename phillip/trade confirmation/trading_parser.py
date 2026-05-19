@@ -83,7 +83,7 @@ def create_excel(transactions, output_file):
     """创建Excel文件"""
     output_data = [['總成交確認'], []]
     
-    for trans in transactions:
+    for trans 在 transactions:
         output_data.extend([
             [],
             [trans['action']],
