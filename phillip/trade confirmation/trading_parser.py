@@ -5,85 +5,117 @@ from pathlib import Path
 def parse_trading_data(text):
     """解析交易记录文本"""
     
-    # 清理文本：把断行的 POEMSHK 合并回上一行
-    text = re.sub(r' -\n\s*\n\s*POEMSHK', ' - POEMSHK', text)
+    # 清理文本：把断行的 POEMSHK/MCSGXPHL 等合并回上一行
+    text = re.sub(r' -\s*\n\s*\n\s*(POEMSHK|MCSGXPHL\w*|PHLX\w*)', r' - \1', text)
     
-    blocks = text.split('––––––––––––––––––––––––––––––––––')
-    if len(blocks) == 1:
-        blocks = split_by_product(text)
+    # 也处理没有 - 的情况（如 BUY 1 P.DAEU267100 @ 0.01370\n\nPOEMSHK...）
+    text = re.sub(r'(@\s*[\d.]+\s*)\n\s*\n\s*(POEMSHK|MCSGXPHL\w*|PHLX\w*)', 
+                  r'\1- \2', text)
+    
+    lines = text.split('\n')
+    
+    # 交易正则表达式：支持期权合约格式（含点号、数字、字母）
+    detail_pattern = r'(买入|卖出|BUY|SELL)\s+(\d+)\s*(?:\[(\d+)\])?\s*([A-Za-z0-9.$]+?)\s*@\s*([\d.]+)\s*-'
     
     transactions = []
-    
-    for block in blocks:
-        block = block.strip()
-        if not block:
-            continue
-        
-        lines = block.split('\n')
-        
-        # 修改正则：匹配 BUY/SELL ... @ ... - (不限定POEMSHK)
-        detail_pattern = r'(买入|卖出|BUY|SELL)\s+(\d+)\s*(?:\[(\d+)\])?\s*(\w+)\s*@\s*([\d.]+)\s*-'
-        details = []
-        action = None
-        symbol = None
-        
-        for line in lines:
-            match = re.search(detail_pattern, line, re.IGNORECASE)
-            if match:
-                action_text = match.group(1).upper()
-                if action_text in ['卖出', 'SELL']:
-                    action = '沽出'
-                else:
-                    action = '買入'
-                
-                actual_qty = match.group(3)
-                if actual_qty:
-                    qty = int(actual_qty)
-                else:
-                    qty = int(match.group(2))
-                
-                symbol = match.group(4)
-                price = float(match.group(5))
-                details.append((qty, price))
-        
-        if symbol and details:
-            total_qty = sum(q for q, _ in details)
-            total_value = sum(q * p for q, p in details)
-            avg_price = total_value / total_qty
-            
-            transactions.append({
-                'action': action,
-                'product': symbol,
-                'quantity': total_qty,
-                'avg_price': avg_price
-            })
-    
-    return transactions
-
-def split_by_product(text):
-    """按产品总览行分割文本"""
-    lines = text.strip().split('\n')
-    blocks = []
-    current_block = []
+    current_symbol = None
+    current_action = None
+    current_details = []
     
     for line in lines:
-        if re.search(r'(Silver|Gold|E-Mini|E-mini|Nikkei|USD/CNH|Mini-DAX)', line):
-            if current_block:
-                blocks.append('\n'.join(current_block))
-            current_block = []
-        if line.strip():
-            current_block.append(line)
+        line = line.strip()
+        if not line:
+            continue
+        
+        # 跳过分隔符
+        if line.startswith('––––––'):
+            continue
+        
+        # 跳过产品描述行
+        if re.search(r'^[A-Za-z]+:\s*(September|October|November|December|January|February|March|April|May|June|July|August|Call|Put|Option)', line):
+            continue
+        
+        # 跳过交易所标识行
+        if re.search(r'^(POEMSHK|MCSGXPHL|PHLX)\s*\(', line):
+            continue
+        
+        # 跳过纯数字日期行
+        if re.match(r'^\d{2}/\d{2}/\d{4}$', line):
+            continue
+        
+        # 跳过产品总览行（如 "Nikkei 225 (Yen): June 2026"）
+        if re.search(r'^[A-Za-z\s/()-]+:\s*(January|February|March|April|May|June|July|August|September|October|November|December|20\d{2})', line):
+            continue
+        
+        # 匹配交易行
+        match = re.search(detail_pattern, line, re.IGNORECASE)
+        if match:
+            action_text = match.group(1).upper()
+            if action_text in ['卖出', 'SELL']:
+                action = '沽出'
+            else:
+                action = '買入'
+            
+            actual_qty = match.group(3)
+            if actual_qty:
+                qty = int(actual_qty)
+            else:
+                qty = int(match.group(2))
+            
+            symbol = match.group(4).strip()
+            price = float(match.group(5))
+            
+            # 如果是新合约或方向改变，保存之前的交易
+            if current_symbol and (symbol != current_symbol or action != current_action):
+                if current_details:
+                    total_qty = sum(q for q, _ in current_details)
+                    total_value = sum(q * p for q, p in current_details)
+                    avg_price = total_value / total_qty
+                    transactions.append({
+                        'action': current_action,
+                        'product': current_symbol,
+                        'quantity': total_qty,
+                        'avg_price': avg_price
+                    })
+                current_details = []
+            
+            current_symbol = symbol
+            current_action = action
+            current_details.append((qty, price))
     
-    if current_block:
-        blocks.append('\n'.join(current_block))
+    # 处理最后一个交易
+    if current_symbol and current_details:
+        total_qty = sum(q for q, _ in current_details)
+        total_value = sum(q * p for q, p in current_details)
+        avg_price = total_value / total_qty
+        transactions.append({
+            'action': current_action,
+            'product': current_symbol,
+            'quantity': total_qty,
+            'avg_price': avg_price
+        })
     
-    return blocks
+    # 合并相同产品和方向的订单
+    merged = {}
+    for trans in transactions:
+        key = (trans['action'], trans['product'])
+        if key in merged:
+            old_qty = merged[key]['quantity']
+            old_value = merged[key]['avg_price'] * old_qty
+            new_qty = old_qty + trans['quantity']
+            new_value = old_value + (trans['avg_price'] * trans['quantity'])
+            merged[key]['quantity'] = new_qty
+            merged[key]['avg_price'] = new_value / new_qty
+        else:
+            merged[key] = trans.copy()
+    
+    return list(merged.values())
 
 def create_excel(transactions, output_file):
     """创建Excel文件"""
     output_data = [['總成交確認'], []]
     
-    for trans 在 transactions:
+    for trans in transactions:
         output_data.extend([
             [],
             [trans['action']],
@@ -107,10 +139,13 @@ def main():
     
     lines = []
     while True:
-        line = input()
-        if line == "" and lines and lines[-1] == "":
+        try:
+            line = input()
+            if line == "" and lines and lines[-1] == "":
+                break
+            lines.append(line)
+        except EOFError:
             break
-        lines.append(line)
     
     text = '\n'.join(lines)
     
@@ -139,6 +174,8 @@ def main():
         
     except Exception as e:
         print(f"❌ 處理出錯: {e}")
+        import traceback
+        traceback.print_exc()
 
 if __name__ == "__main__":
     main()
